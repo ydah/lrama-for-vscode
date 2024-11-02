@@ -1,32 +1,237 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "lrama",
-	"patterns": [
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#strings"
-		}
-	],
-	"repository": {
-		"keywords": {
-			"patterns": [{
-				"name": "keyword.control.lrama",
-				"match": "\\b(if|while|for|return)\\b"
-			}]
-		},
-		"strings": {
-			"name": "string.quoted.double.lrama",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
+	"scopeName": "source.yacc",
+  "injections": {
+    "cpp.yacc - (string | comment)": {
+      "patterns": [
+        {
+          "include": "#injected.cpp"
+        }
+      ]
+    }
+  },
+  "patterns": [
+    {
+      "include": "#grammar.before"
+    },
+    {
+      "include": "#grammar.rules"
+    }
+  ],
+  "repository": {
+    "injected.cpp": {
+      "patterns": [
+        {
+          "include": "#special_identifiers"
+        },
+        {
+          "include": "#integers"
+        },
+        {
+          "include": "source.cpp"
+        }
+      ]
+    },
+    "string.double_quote": {
+      "begin": "\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.yacc"
+        }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.yacc"
+        }
+      },
+      "name": "string.quoted.double.yacc",
+      "patterns": [
+        {
+          "include": "source.c#string_escaped_char"
+        },
+        {
+          "include": "source.c#string_placeholder"
+        }
+      ]
+    },
+    "string.single_quote": {
+      "begin": "'",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.yacc"
+        }
+      },
+      "end": "'",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.yacc"
+        }
+      },
+      "name": "string.quoted.single.c",
+      "patterns": [
+        {
+          "include": "source.c#string_escaped_char"
+        }
+      ]
+    },
+    "special_identifiers": {
+      "match": "[@$](\\d+|\\$)",
+      "name": "support.variable.yacc"
+    },
+    "integers": {
+        "match": "(-?[0-9]+)"
+    },
+    "grammar.before": {
+      "patterns": [
+        {
+          "include": "#decls.cpp"
+        },
+        {
+          "include": "#options"
+        }
+      ]
+    },
+    "decls.cpp": {
+      "begin": "^%{",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.separator.tag.section.yacc"
+        }
+      },
+      "end": "^%}",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.separator.tag.section.yacc"
+        }
+      },
+      "name": "source.cpp",
+      "patterns": [
+        {
+          "include": "#integers"
+        },
+        {
+          "include": "source.cpp"
+        }
+      ]
+    },
+    "options": {
+      "patterns": [
+        {
+          "include": "source.c#comments"
+        },
+        {
+          "include": "#string.double_quote"
+        },
+        {
+          "include": "#string.single_quote"
+        },
+        {
+          "include": "#options_type"
+        },
 				{
-					"name": "constant.character.escape.lrama",
-					"match": "\\\\."
+          "include": "#options_inline"
+        },
+        {
+          "include": "#options_basic"
+        }
+      ]
+    },
+    "options_basic": {
+      "match": "^%(debug|defines|destructor|dprec|error-verbose|expect|glr-parser|initial-action|left|lex-param|locations|merge|name-prefix|no[_-]lines|nonassoc|output|parse-param|prec|pure[_-]parser|raw|require|right|start|token[_-]table|union|token|type|after-shift|before-reduce|after-reduce|after-shift-error-token|after-pop-stack|rule)",
+      "name": "keyword.source.yacc"
+    },
+		"options_inline": {
+      "match": "^(%rule)\\s*(%inline)",
+			"captures": {
+				"1": {
+					"name": "keyword.source.yacc"
+				},
+				"2": {
+					"name": "keyword.source.yacc"
 				}
-			]
-		}
-	},
-	"scopeName": "source.y"
+			}
+		},
+    "options_type": {
+      "match": "(^%(?:token|type))\\s*\\<(.*?)\\>",
+      "captures": {
+        "1": {
+          "name": "keyword.source.yacc"
+        },
+        "2": {
+          "name": "support.type.yacc"
+        }
+      }
+    },
+    "grammar.rules": {
+      "begin": "^%%",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.separator.tag.section.yacc"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.c#comments"
+        },
+        {
+          "include": "#grammar.after"
+        },
+        {
+          "include": "#rule"
+        }
+      ]
+    },
+    "rule": {
+      "begin": "([\\w\\-_][\\w\\d\\-_]*)([ ]*):",
+      "beginCaptures": {
+        "1": {
+          "name": "variable.language.yacc"
+        }
+      },
+      "end": ";",
+      "patterns": [
+        {
+          "include": "source.c#comments"
+        },
+        {
+          "include": "#rule.code"
+        },
+        {
+          "include": "#string.single_quote"
+        },
+        {
+          "include": "#string.double_quote"
+        }
+      ]
+    },
+    "rule.code": {
+      "begin": "{",
+      "end": "}",
+      "name": "cpp.yacc",
+      "patterns": [
+        {
+          "include": "#special_identifiers"
+        }
+      ]
+    },
+    "grammar.after": {
+      "begin": "^%%",
+      "beginCaptures": {
+        "0": {
+          "name": "keyword.source.yacc"
+        }
+      },
+      "name": "source.cpp",
+      "patterns": [
+        {
+          "include": "#integers"
+        },
+        {
+          "include": "source.cpp"
+        }
+      ]
+    }
+  }
 }
