@@ -1,0 +1,25 @@
+{
+  "name": "lrama",
+  "displayName": "Lrama",
+  "description": "Lrama syntax highlighting and more.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "lrama",
+      "aliases": ["lrama", "lrama"],
+      "extensions": [".y"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "lrama",
+      "scopeName": "source.y",
+      "path": "./syntaxes/lrama.tmLanguage.json"
+    }]
+  }
+}
