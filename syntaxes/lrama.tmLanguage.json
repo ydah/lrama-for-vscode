@@ -139,7 +139,7 @@
       ]
     },
     "options_basic": {
-      "match": "^%(debug|defines|destructor|dprec|error-verbose|expect|glr-parser|initial-action|left|lex-param|locations|merge|name-prefix|no[_-]lines|nonassoc|output|parse-param|prec|pure[_-]parser|raw|require|right|start|token[_-]table|union|token|type|after-shift|before-reduce|after-reduce|after-shift-error-token|after-pop-stack|rule)",
+      "match": "^%(debug|defines|destructor|dprec|error-verbose|expect|glr-parser|initial-action|left|lex-param|locations|merge|name-prefix|no[_-]lines|nonassoc|output|parse-param|prec|pure[_-]parser|raw|require|right|start|token[_-]table|union|token|nterm|type|after-shift|before-reduce|after-reduce|after-shift-error-token|after-pop-stack|rule)",
       "name": "keyword.source.yacc"
     },
 		"options_inline": {
