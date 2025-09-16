@@ -544,6 +544,7 @@ export class LramaParser {
     let isInline = false;
     if (
       this.currentTokenIndex < this.tokens.length &&
+      this.tokens[this.currentTokenIndex].type === "DIRECTIVE" &&
       this.tokens[this.currentTokenIndex].value === "%inline"
     ) {
       isInline = true;
@@ -560,13 +561,16 @@ export class LramaParser {
       const nameRange = this.createRange(nameToken);
       this.currentTokenIndex++;
 
-      // Parse parameters
+      // Check if this has parameters (making it a parameterized rule)
       let params: string[] = [];
+      let isParameterized = false;
+
       if (
         this.currentTokenIndex < this.tokens.length &&
         this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
         this.tokens[this.currentTokenIndex].value === "("
       ) {
+        isParameterized = true;
         this.currentTokenIndex++;
 
         while (this.currentTokenIndex < this.tokens.length) {
@@ -582,16 +586,25 @@ export class LramaParser {
         }
       }
 
-      // Create symbol for the parameterized rule
-      // Use base name as the key so all calls with different parameters link to same definition
-      const symbol = this.symbolTable.addParameterizedRuleDefinition(
-        baseName,
-        {
+      // Create appropriate symbol based on whether it's parameterized
+      let symbol;
+      if (isParameterized) {
+        // Parameterized rule (with or without %inline)
+        symbol = this.symbolTable.addParameterizedRuleDefinition(
+          baseName,
+          {
+            range: nameRange,
+            nameRange: nameRange,
+          },
+          params
+        );
+      } else {
+        // Regular rule (possibly with %inline)
+        symbol = this.symbolTable.addSymbol(baseName, SymbolType.Rule, {
           range: nameRange,
           nameRange: nameRange,
-        },
-        params
-      );
+        });
+      }
 
       // Parse type tag
       if (
@@ -609,7 +622,12 @@ export class LramaParser {
         this.tokens[this.currentTokenIndex].value === ":"
       ) {
         this.currentTokenIndex++;
-        this.parseParameterizedRuleBody(baseName, params);
+
+        if (isParameterized) {
+          this.parseParameterizedRuleBody(baseName, params);
+        } else {
+          this.parseRuleBody(baseName);
+        }
       }
     }
   }
@@ -807,10 +825,14 @@ export class LramaParser {
       ) {
         // This is a rule definition
         const range = this.createRange(nameToken);
-        this.symbolTable.addSymbol(nameToken.value, SymbolType.Rule, {
-          range: range,
-          nameRange: range,
-        });
+        const symbol = this.symbolTable.addSymbol(
+          nameToken.value,
+          SymbolType.Rule,
+          {
+            range: range,
+            nameRange: range,
+          }
+        );
         this.currentTokenIndex = nextIndex + 1; // Skip past ':'
         this.parseRuleBody(nameToken.value);
         return;
@@ -1073,6 +1095,11 @@ export class LramaParser {
           continue;
         }
 
+        // Skip warning for character literals (they are implicitly defined tokens)
+        if (this.isCharacterLiteral(symbol.name)) {
+          continue;
+        }
+
         // Only warn for non-terminal symbols (not tokens or built-in functions)
         if (
           !this.isBuiltinFunction(symbol.name) &&
@@ -1089,12 +1116,13 @@ export class LramaParser {
         }
       }
 
-      // Check for unused symbols
+      // Check for unused symbols (but not for character literal tokens)
       if (
         symbol.definition &&
         symbol.references.length === 0 &&
         symbol.parameterizedCalls?.length === 0 &&
-        symbol.type === SymbolType.Rule
+        symbol.type === SymbolType.Rule &&
+        !this.isCharacterLiteral(symbol.name)
       ) {
         this.addDiagnostic(
           symbol.definition.nameRange,
@@ -1103,6 +1131,11 @@ export class LramaParser {
         );
       }
     }
+  }
+
+  private isCharacterLiteral(name: string): boolean {
+    // Check if the name is a character literal like '+', '-', etc.
+    return name.startsWith("'") && name.endsWith("'");
   }
 
   private isBuiltinFunction(name: string): boolean {
@@ -1128,7 +1161,8 @@ export class LramaParser {
     return (
       /^[A-Z_]+$/.test(baseName) ||
       baseName.startsWith("t") ||
-      baseName.startsWith("k")
+      baseName.startsWith("k") ||
+      baseName.startsWith("TOKEN")
     );
   }
 
