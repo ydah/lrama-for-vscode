@@ -1,7 +1,7 @@
 {
   "name": "lrama",
   "displayName": "Lrama",
-  "description": "Lrama syntax highlighting and more.",
+  "description": "Lrama syntax highlighting, snippets, and language server.",
   "version": "0.0.1",
   "publisher": "ydah",
   "repository": {
@@ -13,22 +13,17 @@
     "vscode": "^1.95.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Snippets"
   ],
+  "main": "./client/out/extension.js",
   "contributes": {
-    "languages": [
-      {
-        "id": "lrama",
-        "aliases": [
-          "lrama",
-          "lrama"
-        ],
-        "extensions": [
-          ".y"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
+    "languages": [{
+      "id": "lrama",
+      "aliases": ["lrama", "Lrama", "yacc", "bison"],
+      "extensions": [".y", ".yacc", ".yy"],
+      "configuration": "./language-configuration.json"
+    }],
     "grammars": [
       {
         "language": "lrama",
@@ -41,6 +36,32 @@
         "language": "lrama",
         "path": "./snippets/lrama.json"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Lrama",
+      "properties": {
+        "lrama.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
   }
 }
