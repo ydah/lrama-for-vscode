@@ -1,0 +1,337 @@
+{
+  "Grammar File Template": {
+    "prefix": "lrama-template",
+    "body": [
+      "%{",
+      "/* Prologue - C declarations */",
+      "#include <stdio.h>",
+      "#include <stdlib.h>",
+      "",
+      "int yylex(void);",
+      "void yyerror(const char *s);",
+      "%}",
+      "",
+      "/* Bison declarations */",
+      "%union {",
+      "\tint ival;",
+      "\tdouble dval;",
+      "\tchar *sval;",
+      "}",
+      "",
+      "%token <ival> NUMBER",
+      "%token <sval> STRING",
+      "",
+      "%type <${1:type}> ${2:nonterminal}",
+      "",
+      "%start ${3:program}",
+      "",
+      "%%",
+      "/* Grammar rules */",
+      "",
+      "${3:program}:",
+      "\t${4:/* empty */}",
+      "\t| ${5:rule}",
+      "\t;",
+      "",
+      "%%",
+      "/* Epilogue - C code */",
+      "",
+      "int main(void) {",
+      "\treturn yyparse();",
+      "}",
+      "",
+      "void yyerror(const char *s) {",
+      "\tfprintf(stderr, \"Error: %s\\n\", s);",
+      "}"
+    ],
+    "description": "Complete Lrama grammar file template"
+  },
+
+  "Parameterized Rule Definition": {
+    "prefix": "rule",
+    "body": [
+      "%rule ${1:rule_name}(${2:X}): ${3:/* empty */}",
+      "\t| ${4:$2}",
+      "\t;"
+    ],
+    "description": "Define a parameterized rule"
+  },
+
+  "Inline Rule Definition": {
+    "prefix": "rule-inline",
+    "body": [
+      "%rule %inline ${1:rule_name}: ${2:token1}",
+      "\t| ${3:token2}",
+      "\t;"
+    ],
+    "description": "Define an inline rule"
+  },
+
+  "Option Rule": {
+    "prefix": "option",
+    "body": ["option(${1:symbol})$0"],
+    "description": "Optional element (zero or one)"
+  },
+
+  "List Rule": {
+    "prefix": "list",
+    "body": ["list(${1:symbol})$0"],
+    "description": "List of elements (zero or more)"
+  },
+
+  "Nonempty List Rule": {
+    "prefix": "nonempty-list",
+    "body": ["nonempty_list(${1:symbol})$0"],
+    "description": "Non-empty list (one or more)"
+  },
+
+  "Separated List": {
+    "prefix": "separated-list",
+    "body": ["separated_list(${1:separator}, ${2:symbol})$0"],
+    "description": "Separated list (e.g., comma-separated)"
+  },
+
+  "Separated Nonempty List": {
+    "prefix": "separated-nonempty-list",
+    "body": ["separated_nonempty_list(${1:separator}, ${2:symbol})$0"],
+    "description": "Non-empty separated list"
+  },
+
+  "Preceded Rule": {
+    "prefix": "preceded",
+    "body": ["preceded(${1:opening}, ${2:symbol})$0"],
+    "description": "Symbol preceded by another"
+  },
+
+  "Terminated Rule": {
+    "prefix": "terminated",
+    "body": ["terminated(${1:symbol}, ${2:closing})$0"],
+    "description": "Symbol terminated by another"
+  },
+
+  "Delimited Rule": {
+    "prefix": "delimited",
+    "body": ["delimited(${1:opening}, ${2:symbol}, ${3:closing})$0"],
+    "description": "Symbol delimited by opening and closing"
+  },
+
+  "Union Declaration": {
+    "prefix": "union",
+    "body": [
+      "%union {",
+      "\tint ${1:ival};",
+      "\tdouble ${2:dval};",
+      "\tchar *${3:sval};",
+      "\t${4:/* more fields */}",
+      "}"
+    ],
+    "description": "Union type declaration"
+  },
+
+  "Token Declaration": {
+    "prefix": "token",
+    "body": ["%token <${1:type}> ${2:TOKEN_NAME}$0"],
+    "description": "Token declaration with type"
+  },
+
+  "Type Declaration": {
+    "prefix": "type",
+    "body": ["%type <${1:type}> ${2:nonterminal}$0"],
+    "description": "Type declaration for nonterminal"
+  },
+
+  "Nterm Declaration": {
+    "prefix": "nterm",
+    "body": ["%nterm <${1:type}> ${2:nonterminal}$0"],
+    "description": "Nonterminal declaration (Lrama/Bison 3.0+)"
+  },
+
+  "Left Associative": {
+    "prefix": "left",
+    "body": ["%left ${1:'+' '-'}$0"],
+    "description": "Left associative operator"
+  },
+
+  "Right Associative": {
+    "prefix": "right",
+    "body": ["%right ${1:'^'}$0"],
+    "description": "Right associative operator"
+  },
+
+  "Non-associative": {
+    "prefix": "nonassoc",
+    "body": ["%nonassoc ${1:'<' '>' LEQ GEQ}$0"],
+    "description": "Non-associative operator"
+  },
+
+  "Precedence": {
+    "prefix": "precedence",
+    "body": ["%precedence ${1:NEG}$0"],
+    "description": "Precedence declaration"
+  },
+
+  "Destructor": {
+    "prefix": "destructor",
+    "body": [
+      "%destructor {",
+      "\t${1:/* cleanup code */}",
+      "\tfprintf(stderr, \"Destroying ${2:symbol}: %d\\n\", \\$\\$);",
+      "} <${3:type}>"
+    ],
+    "description": "Destructor for semantic values"
+  },
+
+  "Printer": {
+    "prefix": "printer",
+    "body": [
+      "%printer {",
+      "\tfprintf(yyoutput, \"${1:format}\", \\$\\$);",
+      "} <${2:type}>"
+    ],
+    "description": "Printer for debugging"
+  },
+
+  "Grammar Rule": {
+    "prefix": "gram",
+    "body": [
+      "${1:rule_name}:",
+      "\t${2:/* empty */} {",
+      "\t\t${3:/* action */}",
+      "\t}",
+      "\t| ${4:alternative} {",
+      "\t\t${5:/* action */}",
+      "\t}",
+      "\t;"
+    ],
+    "description": "Grammar rule with actions"
+  },
+
+  "Named Reference Rule": {
+    "prefix": "named-ref",
+    "body": [
+      "${1:expr}[result]: ${2:expr}[left] ${3:'+'} ${4:expr}[right] {",
+      "\t\\$result = \\$left + \\$right;",
+      "}"
+    ],
+    "description": "Rule with named references"
+  },
+
+  "Action Block": {
+    "prefix": "action",
+    "body": ["{", "\t${1:\\$\\$ = ${2:value};}", "}"],
+    "description": "Action block"
+  },
+
+  "Midrule Action": {
+    "prefix": "midrule",
+    "body": ["{ ${1:/* mid-rule action */} }<${2:type}>$0"],
+    "description": "Typed midrule action"
+  },
+
+  "Callback After Shift": {
+    "prefix": "after-shift",
+    "body": ["%after-shift ${1:callback_function}"],
+    "description": "After shift callback"
+  },
+
+  "Callback Before Reduce": {
+    "prefix": "before-reduce",
+    "body": ["%before-reduce ${1:callback_function}"],
+    "description": "Before reduce callback"
+  },
+
+  "Callback After Reduce": {
+    "prefix": "after-reduce",
+    "body": ["%after-reduce ${1:callback_function}"],
+    "description": "After reduce callback"
+  },
+
+  "Define LR Type": {
+    "prefix": "define-lr",
+    "body": ["%define lr.type ${1:ielr}"],
+    "description": "Define LR parser type (lalr1/ielr/canonical-lr)"
+  },
+
+  "Parse Parameters": {
+    "prefix": "parse-param",
+    "body": ["%parse-param {${1:void *data}}"],
+    "description": "Parser parameters"
+  },
+
+  "Lex Parameters": {
+    "prefix": "lex-param",
+    "body": ["%lex-param {${1:void *scanner}}"],
+    "description": "Lexer parameters"
+  },
+
+  "Start Symbol": {
+    "prefix": "start",
+    "body": ["%start ${1:program}"],
+    "description": "Start symbol declaration"
+  },
+
+  "Suffix Question": {
+    "prefix": "?",
+    "body": ["${1:symbol}?$0"],
+    "description": "Optional suffix operator"
+  },
+
+  "Suffix Star": {
+    "prefix": "*",
+    "body": ["${1:symbol}*$0"],
+    "description": "Zero or more suffix operator"
+  },
+
+  "Suffix Plus": {
+    "prefix": "+",
+    "body": ["${1:symbol}+$0"],
+    "description": "One or more suffix operator"
+  },
+
+  "Stack Index Reference": {
+    "prefix": "$:",
+    "body": ["\\$:${1:index}"],
+    "description": "Stack index reference for BYOS"
+  },
+
+  "Aliased Reference": {
+    "prefix": "$[]",
+    "body": ["\\$[${1:alias-name}]"],
+    "description": "Aliased reference"
+  },
+
+  "Error Recovery": {
+    "prefix": "error",
+    "body": [
+      "${1:stmt}: error ${2:';'} {",
+      "\t${3:/* error recovery action */}",
+      "\tyyerrok;",
+      "}"
+    ],
+    "description": "Error recovery rule"
+  },
+
+  "Locations": {
+    "prefix": "locations",
+    "body": ["%locations"],
+    "description": "Enable location tracking"
+  },
+
+  "No Standard Library": {
+    "prefix": "no-stdlib",
+    "body": ["%no-stdlib"],
+    "description": "Disable Lrama standard library"
+  },
+
+  "Debug Mode": {
+    "prefix": "debug",
+    "body": ["%debug"],
+    "description": "Enable debug mode"
+  },
+
+  "Inline Option": {
+    "prefix": "ioption",
+    "body": ["ioption(${1:symbol})$0"],
+    "description": "Inline option (expanded inline without intermediate rule)"
+  }
+}
