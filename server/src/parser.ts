@@ -486,16 +486,30 @@ export class LramaParser {
   }
 
   private parsePrecedenceDeclaration(): void {
+    const directiveToken = this.tokens[this.currentTokenIndex];
+    const directiveType = directiveToken.value; // %left, %right, %nonassoc, %precedence
     this.currentTokenIndex++; // Skip directive
 
     // Parse tokens/symbols in precedence declaration
     while (this.currentTokenIndex < this.tokens.length) {
       const token = this.tokens[this.currentTokenIndex];
 
-      if (token.type === "IDENTIFIER" || token.type === "CHARACTER") {
-        // Add reference to the symbol
+      if (token.type === "IDENTIFIER") {
+        // Add as a token definition with precedence
         const range = this.createRange(token);
-        this.symbolTable.addReference(token.value, { range });
+        this.symbolTable.addSymbol(token.value, SymbolType.Token, {
+          range: range,
+          nameRange: range,
+        });
+        this.currentTokenIndex++;
+      } else if (token.type === "CHARACTER") {
+        // Character literal tokens (like '+', '-', etc.)
+        // Add as a token definition
+        const range = this.createRange(token);
+        this.symbolTable.addSymbol(token.value, SymbolType.Token, {
+          range: range,
+          nameRange: range,
+        });
         this.currentTokenIndex++;
       } else if (this.isEndOfDeclaration(token)) {
         break;
