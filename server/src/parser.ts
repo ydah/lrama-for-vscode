@@ -604,6 +604,9 @@ export class LramaParser {
     ruleName: string,
     parameters: string[]
   ): void {
+    // Track that we're in a parameterized rule context
+    const currentParameters = new Set(parameters);
+
     while (this.currentTokenIndex < this.tokens.length) {
       const token = this.tokens[this.currentTokenIndex];
 
@@ -636,24 +639,26 @@ export class LramaParser {
       if (token.type === "IDENTIFIER") {
         const nextIndex = this.currentTokenIndex + 1;
 
-        // Check if this is a parameterized call (including recursive calls)
+        // Check if this is a parameterized call
         if (
           nextIndex < this.tokens.length &&
           this.tokens[nextIndex].type === "SPECIAL" &&
           this.tokens[nextIndex].value === "("
         ) {
-          // This is a parameterized call
+          // This is a parameterized call like f_kw(value) or f_kwarg(value)
           const callRange = this.createRange(token);
           this.currentTokenIndex = nextIndex + 1; // Skip '('
-          const args = this.parseArgumentList();
 
-          // Add parameterized call reference using base name
+          // Parse arguments and check if they use parameters
+          const args = this.parseArgumentListWithContext(currentParameters);
+
+          // Add parameterized call reference
           this.symbolTable.addParameterizedCall(token.value, {
             range: callRange,
             arguments: args,
           });
-        } else if (parameters.includes(token.value)) {
-          // This is a parameter reference, don't add it as undefined symbol
+        } else if (currentParameters.has(token.value)) {
+          // This is a parameter reference, skip it without adding as undefined
           this.currentTokenIndex++;
         } else {
           // Regular symbol reference
@@ -699,6 +704,52 @@ export class LramaParser {
 
       this.currentTokenIndex++;
     }
+  }
+
+  private parseArgumentListWithContext(knownParameters: Set<string>): string[] {
+    const args: string[] = [];
+    let parenDepth = 1;
+
+    while (this.currentTokenIndex < this.tokens.length && parenDepth > 0) {
+      const token = this.tokens[this.currentTokenIndex];
+
+      if (token.type === "SPECIAL" && token.value === "(") {
+        parenDepth++;
+        this.currentTokenIndex++;
+      } else if (token.type === "SPECIAL" && token.value === ")") {
+        parenDepth--;
+        if (parenDepth === 0) {
+          this.currentTokenIndex++;
+          break;
+        }
+        this.currentTokenIndex++;
+      } else if (
+        token.type === "SPECIAL" &&
+        token.value === "," &&
+        parenDepth === 1
+      ) {
+        // Argument separator at top level
+        this.currentTokenIndex++;
+      } else if (token.type === "IDENTIFIER" && parenDepth === 1) {
+        // Capture argument names at top level
+        args.push(token.value);
+
+        // If this is not a known parameter, add it as a reference
+        if (!knownParameters.has(token.value)) {
+          const range = this.createRange(token);
+          this.symbolTable.addReference(token.value, { range });
+        }
+        this.currentTokenIndex++;
+      } else if (token.type === "CHARACTER" && parenDepth === 1) {
+        // Character literal as argument
+        args.push(token.value);
+        this.currentTokenIndex++;
+      } else {
+        this.currentTokenIndex++;
+      }
+    }
+
+    return args;
   }
 
   private parseRule(): void {
@@ -909,7 +960,7 @@ export class LramaParser {
       } else if (token.type === "IDENTIFIER" && parenDepth === 1) {
         // Capture argument names at top level
         args.push(token.value);
-        // Also add reference for the argument
+        // Add reference for the argument (unless it's handled in context)
         const range = this.createRange(token);
         this.symbolTable.addReference(token.value, { range });
         this.currentTokenIndex++;
@@ -980,23 +1031,39 @@ export class LramaParser {
 
   private validateSymbols(): void {
     const symbols = this.symbolTable.getAllSymbols();
+    const knownParameters = new Set<string>();
+
+    // Collect all parameter names from parameterized rules
+    for (const symbol of symbols) {
+      if (symbol.type === SymbolType.ParameterizedRule && symbol.parameters) {
+        for (const param of symbol.parameters) {
+          knownParameters.add(param);
+        }
+      }
+    }
 
     for (const symbol of symbols) {
-      // Skip validation for parameterized rule base names (without parentheses)
+      // Skip validation for parameterized rule base names without full definition
       if (
         symbol.type === SymbolType.ParameterizedRule &&
-        !symbol.name.includes("(")
+        !symbol.isParameterized &&
+        !symbol.definition
       ) {
         continue;
       }
 
       // Check for undefined symbols
       if (symbol.references.length > 0 && !symbol.definition) {
+        // Skip warning for parameters used in parameterized rules
+        if (knownParameters.has(symbol.name)) {
+          continue;
+        }
+
         // Only warn for non-terminal symbols (not tokens or built-in functions)
         if (
           !this.isBuiltinFunction(symbol.name) &&
           !this.isLikelyToken(symbol.name) &&
-          !this.isParameter(symbol.name)
+          !this.isCommonParameter(symbol.name)
         ) {
           for (const ref of symbol.references) {
             this.addDiagnostic(
@@ -1012,6 +1079,7 @@ export class LramaParser {
       if (
         symbol.definition &&
         symbol.references.length === 0 &&
+        symbol.parameterizedCalls?.length === 0 &&
         symbol.type === SymbolType.Rule
       ) {
         this.addDiagnostic(
@@ -1050,9 +1118,28 @@ export class LramaParser {
     );
   }
 
-  private isParameter(name: string): boolean {
-    // Common parameter names in parameterized rules
-    const commonParams = ["X", "Y", "Z", "item", "element", "separator"];
+  private isCommonParameter(name: string): boolean {
+    // Common parameter names used in parameterized rules
+    const commonParams = [
+      "X",
+      "Y",
+      "Z",
+      "A",
+      "B",
+      "C",
+      "item",
+      "element",
+      "separator",
+      "value",
+      "arg",
+      "args",
+      "param",
+      "params",
+      "list",
+      "elem",
+      "expr",
+      "stmt",
+    ];
     return commonParams.includes(name);
   }
 
