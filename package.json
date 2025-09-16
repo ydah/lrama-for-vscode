@@ -16,14 +16,28 @@
     "Programming Languages",
     "Snippets"
   ],
+  "activationEvents": [
+    "onLanguage:lrama"
+  ],
   "main": "./client/out/extension.js",
   "contributes": {
-    "languages": [{
-      "id": "lrama",
-      "aliases": ["lrama", "Lrama", "yacc", "bison"],
-      "extensions": [".y", ".yacc", ".yy"],
-      "configuration": "./language-configuration.json"
-    }],
+    "languages": [
+      {
+        "id": "lrama",
+        "aliases": [
+          "lrama",
+          "Lrama",
+          "yacc",
+          "bison"
+        ],
+        "extensions": [
+          ".y",
+          ".yacc",
+          ".yy"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
     "grammars": [
       {
         "language": "lrama",
@@ -44,7 +58,11 @@
         "lrama.trace.server": {
           "scope": "window",
           "type": "string",
-          "enum": ["off", "messages", "verbose"],
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
           "default": "off",
           "description": "Traces the communication between VS Code and the language server."
         }
@@ -52,15 +70,16 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -b",
-    "watch": "tsc -b -w",
-    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+      "vscode:prepublish": "node ./esbuild.js",
+      "compile": "node ./esbuild.js",
+      "watch": "node ./esbuild.js --watch",
+      "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "esbuild": "^0.25.9",
     "eslint": "^8.0.0",
     "typescript": "^5.0.0"
   }
