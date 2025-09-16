@@ -542,25 +542,18 @@ export class LramaParser {
       this.tokens[this.currentTokenIndex].type === "IDENTIFIER"
     ) {
       const nameToken = this.tokens[this.currentTokenIndex];
-      const range = this.createRange(nameToken);
-      const symbol = this.symbolTable.addSymbol(
-        nameToken.value,
-        SymbolType.ParameterizedRule,
-        {
-          range: range,
-          nameRange: range,
-        }
-      );
+      const baseName = nameToken.value;
+      const nameRange = this.createRange(nameToken);
       this.currentTokenIndex++;
 
       // Parse parameters
+      let params: string[] = [];
       if (
         this.currentTokenIndex < this.tokens.length &&
         this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
         this.tokens[this.currentTokenIndex].value === "("
       ) {
         this.currentTokenIndex++;
-        const params: string[] = [];
 
         while (this.currentTokenIndex < this.tokens.length) {
           const token = this.tokens[this.currentTokenIndex];
@@ -573,9 +566,18 @@ export class LramaParser {
           }
           this.currentTokenIndex++;
         }
-
-        symbol.parameters = params;
       }
+
+      // Create symbol for the parameterized rule
+      // Use base name as the key so all calls with different parameters link to same definition
+      const symbol = this.symbolTable.addParameterizedRuleDefinition(
+        baseName,
+        {
+          range: nameRange,
+          nameRange: nameRange,
+        },
+        params
+      );
 
       // Parse type tag
       if (
@@ -593,8 +595,109 @@ export class LramaParser {
         this.tokens[this.currentTokenIndex].value === ":"
       ) {
         this.currentTokenIndex++;
-        this.parseRuleBody(nameToken.value);
+        this.parseParameterizedRuleBody(baseName, params);
       }
+    }
+  }
+
+  private parseParameterizedRuleBody(
+    ruleName: string,
+    parameters: string[]
+  ): void {
+    while (this.currentTokenIndex < this.tokens.length) {
+      const token = this.tokens[this.currentTokenIndex];
+
+      // End of rule
+      if (token.type === "SPECIAL" && token.value === ";") {
+        this.currentTokenIndex++;
+        break;
+      }
+
+      // Alternative separator
+      if (token.type === "SPECIAL" && token.value === "|") {
+        this.currentTokenIndex++;
+        continue;
+      }
+
+      // Action block
+      if (token.type === "SPECIAL" && token.value === "{") {
+        this.skipCodeBlock();
+        // Check for midrule type tag
+        if (
+          this.currentTokenIndex < this.tokens.length &&
+          this.tokens[this.currentTokenIndex].type === "TYPE_TAG"
+        ) {
+          this.currentTokenIndex++;
+        }
+        continue;
+      }
+
+      // Symbol reference
+      if (token.type === "IDENTIFIER") {
+        const nextIndex = this.currentTokenIndex + 1;
+
+        // Check if this is a parameterized call (including recursive calls)
+        if (
+          nextIndex < this.tokens.length &&
+          this.tokens[nextIndex].type === "SPECIAL" &&
+          this.tokens[nextIndex].value === "("
+        ) {
+          // This is a parameterized call
+          const callRange = this.createRange(token);
+          this.currentTokenIndex = nextIndex + 1; // Skip '('
+          const args = this.parseArgumentList();
+
+          // Add parameterized call reference using base name
+          this.symbolTable.addParameterizedCall(token.value, {
+            range: callRange,
+            arguments: args,
+          });
+        } else if (parameters.includes(token.value)) {
+          // This is a parameter reference, don't add it as undefined symbol
+          this.currentTokenIndex++;
+        } else {
+          // Regular symbol reference
+          const range = this.createRange(token);
+          this.symbolTable.addReference(token.value, { range });
+          this.currentTokenIndex++;
+
+          // Check for alias
+          if (
+            this.currentTokenIndex < this.tokens.length &&
+            this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+            this.tokens[this.currentTokenIndex].value === "["
+          ) {
+            this.skipBrackets();
+          }
+
+          // Check for suffix operators
+          if (
+            this.currentTokenIndex < this.tokens.length &&
+            this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+            "?*+".includes(this.tokens[this.currentTokenIndex].value)
+          ) {
+            this.currentTokenIndex++;
+          }
+        }
+        continue;
+      }
+
+      // Character literal
+      if (token.type === "CHARACTER") {
+        this.currentTokenIndex++;
+
+        // Check for suffix operators
+        if (
+          this.currentTokenIndex < this.tokens.length &&
+          this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+          "?*+".includes(this.tokens[this.currentTokenIndex].value)
+        ) {
+          this.currentTokenIndex++;
+        }
+        continue;
+      }
+
+      this.currentTokenIndex++;
     }
   }
 
@@ -683,21 +786,29 @@ export class LramaParser {
 
       // Symbol reference
       if (token.type === "IDENTIFIER") {
-        const range = this.createRange(token);
+        const nextIndex = this.currentTokenIndex + 1;
 
         // Check if this is a parameterized function call
-        const nextIndex = this.currentTokenIndex + 1;
         if (
           nextIndex < this.tokens.length &&
           this.tokens[nextIndex].type === "SPECIAL" &&
           this.tokens[nextIndex].value === "("
         ) {
-          // This is a function call like option(X)
-          this.symbolTable.addReference(token.value, { range });
-          this.currentTokenIndex = nextIndex;
-          this.skipParentheses();
+          // This is a function call like option(X) or mlhs(item)
+          const callRange = this.createRange(token);
+
+          // Parse the function call and its arguments
+          this.currentTokenIndex = nextIndex + 1; // Skip '('
+          const args = this.parseArgumentList();
+
+          // Add parameterized call using base name
+          this.symbolTable.addParameterizedCall(token.value, {
+            range: callRange,
+            arguments: args,
+          });
         } else {
-          // Regular symbol reference
+          // Regular symbol reference (like mlhs without parentheses)
+          const range = this.createRange(token);
           this.symbolTable.addReference(token.value, { range });
           this.currentTokenIndex++;
 
@@ -771,6 +882,49 @@ export class LramaParser {
     }
   }
 
+  private parseArgumentList(): string[] {
+    const args: string[] = [];
+    let parenDepth = 1;
+
+    while (this.currentTokenIndex < this.tokens.length && parenDepth > 0) {
+      const token = this.tokens[this.currentTokenIndex];
+
+      if (token.type === "SPECIAL" && token.value === "(") {
+        parenDepth++;
+        this.currentTokenIndex++;
+      } else if (token.type === "SPECIAL" && token.value === ")") {
+        parenDepth--;
+        if (parenDepth === 0) {
+          this.currentTokenIndex++;
+          break;
+        }
+        this.currentTokenIndex++;
+      } else if (
+        token.type === "SPECIAL" &&
+        token.value === "," &&
+        parenDepth === 1
+      ) {
+        // Argument separator at top level
+        this.currentTokenIndex++;
+      } else if (token.type === "IDENTIFIER" && parenDepth === 1) {
+        // Capture argument names at top level
+        args.push(token.value);
+        // Also add reference for the argument
+        const range = this.createRange(token);
+        this.symbolTable.addReference(token.value, { range });
+        this.currentTokenIndex++;
+      } else if (token.type === "CHARACTER" && parenDepth === 1) {
+        // Character literal as argument
+        args.push(token.value);
+        this.currentTokenIndex++;
+      } else {
+        this.currentTokenIndex++;
+      }
+    }
+
+    return args;
+  }
+
   private skipParentheses(): void {
     let parenDepth = 0;
 
@@ -828,12 +982,21 @@ export class LramaParser {
     const symbols = this.symbolTable.getAllSymbols();
 
     for (const symbol of symbols) {
+      // Skip validation for parameterized rule base names (without parentheses)
+      if (
+        symbol.type === SymbolType.ParameterizedRule &&
+        !symbol.name.includes("(")
+      ) {
+        continue;
+      }
+
       // Check for undefined symbols
       if (symbol.references.length > 0 && !symbol.definition) {
         // Only warn for non-terminal symbols (not tokens or built-in functions)
         if (
           !this.isBuiltinFunction(symbol.name) &&
-          !this.isLikelyToken(symbol.name)
+          !this.isLikelyToken(symbol.name) &&
+          !this.isParameter(symbol.name)
         ) {
           for (const ref of symbol.references) {
             this.addDiagnostic(
@@ -872,14 +1035,25 @@ export class LramaParser {
       "terminated",
       "delimited",
     ];
-    return builtins.includes(name);
+    // Check both with and without parameters
+    const baseName = name.split("(")[0];
+    return builtins.includes(baseName);
   }
 
   private isLikelyToken(name: string): boolean {
     // Tokens often use uppercase or specific patterns
+    const baseName = name.split("(")[0];
     return (
-      /^[A-Z_]+$/.test(name) || name.startsWith("t") || name.startsWith("k")
+      /^[A-Z_]+$/.test(baseName) ||
+      baseName.startsWith("t") ||
+      baseName.startsWith("k")
     );
+  }
+
+  private isParameter(name: string): boolean {
+    // Common parameter names in parameterized rules
+    const commonParams = ["X", "Y", "Z", "item", "element", "separator"];
+    return commonParams.includes(name);
   }
 
   private addDiagnostic(

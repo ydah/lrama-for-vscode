@@ -146,10 +146,35 @@ connection.onReferences((params: ReferenceParams): Location[] | null => {
     return null;
   }
 
-  return symbol.references.map((ref) => ({
-    uri: uri,
-    range: ref.range,
-  }));
+  const locations: Location[] = [];
+
+  // For parameterized rules, only show parameterized calls
+  if (symbol.isParameterized && symbol.parameterizedCalls) {
+    for (const call of symbol.parameterizedCalls) {
+      locations.push({
+        uri: uri,
+        range: call.range,
+      });
+    }
+  } else {
+    // For regular symbols, show regular references
+    for (const ref of symbol.references) {
+      locations.push({
+        uri: uri,
+        range: ref.range,
+      });
+    }
+  }
+
+  // Optionally include the definition if requested
+  if (params.context.includeDeclaration && symbol.definition) {
+    locations.push({
+      uri: uri,
+      range: symbol.definition.range,
+    });
+  }
+
+  return locations;
 });
 
 // Document Symbols (for outline view)
