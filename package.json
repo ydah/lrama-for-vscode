@@ -4,11 +4,11 @@
   "description": "Lrama syntax highlighting and more.",
   "version": "0.0.1",
   "publisher": "ydah",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/ydah/lrama-for-vscode"
-	},
-	"bugs": "https://github.com/ydah/lrama-for-vscode/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ydah/lrama-for-vscode"
+  },
+  "bugs": "https://github.com/ydah/lrama-for-vscode/issues",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -16,17 +16,26 @@
     "Programming Languages"
   ],
   "contributes": {
-    "languages": [{
-      "id": "lrama",
-      "aliases": ["lrama", "lrama"],
-      "extensions": [".y"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "lrama",
-      "scopeName": "source.yacc",
-      "path": "./syntaxes/lrama.tmLanguage.json"
-    }],
+    "languages": [
+      {
+        "id": "lrama",
+        "aliases": [
+          "lrama",
+          "lrama"
+        ],
+        "extensions": [
+          ".y"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lrama",
+        "scopeName": "source.yacc",
+        "path": "./syntaxes/lrama.tmLanguage.json"
+      }
+    ],
     "snippets": [
       {
         "language": "lrama",
