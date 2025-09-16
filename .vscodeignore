@@ -1,4 +1,14 @@
 .vscode/**
 .vscode-test/**
 .gitignore
-vsc-extension-quickstart.md
+tsconfig.json
+tsconfig.tsbuildinfo
+client/src/**
+server/src/**
+**/*.test.ts
+node_modules/**
+client/node_modules/**
+server/node_modules/**
+**/package-lock.json
+**/tsconfig.json
+**/tsconfig.tsbuildinfo
