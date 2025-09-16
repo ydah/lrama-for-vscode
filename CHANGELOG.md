@@ -6,6 +6,13 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [v0.1.1] - 2025-09-16
+
+### Fixed
+
+- Fix not working LSP server features, such as Go to Definition and Find All References and Document Symbols and Diagnostics
+
+
 ## [v0.1.0] - 2025-09-16
 
 ### Added
