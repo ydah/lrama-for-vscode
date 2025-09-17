@@ -120,7 +120,7 @@ export class LramaParser {
           const directiveMatch = line
             .substr(column)
             .match(
-              /^%(rule|inline|token|type|nterm|start|union|left|right|nonassoc|precedence|destructor|printer|locations|no-stdlib|define|after-shift|before-reduce|after-reduce|after-shift-error-token|after-pop-stack|debug|error-verbose)/
+              /^%(rule|inline|token|type|nterm|start|union|left|right|nonassoc|precedence|prec|empty|destructor|printer|locations|no-stdlib|define|after-shift|before-reduce|after-reduce|after-shift-error-token|after-pop-stack|debug|error-verbose)/
             );
           if (directiveMatch) {
             tokens.push({
@@ -667,6 +667,33 @@ export class LramaParser {
         continue;
       }
 
+      // Check for directives
+      if (token.type === "DIRECTIVE") {
+        if (token.value === "%prec") {
+          this.currentTokenIndex++;
+          // The next token is a precedence specifier
+          if (this.currentTokenIndex < this.tokens.length) {
+            const precToken = this.tokens[this.currentTokenIndex];
+            if (
+              precToken.type === "IDENTIFIER" ||
+              precToken.type === "CHARACTER"
+            ) {
+              // Add reference to the precedence token
+              const range = this.createRange(precToken);
+              this.symbolTable.addReference(precToken.value, { range });
+              this.currentTokenIndex++;
+            }
+          }
+        } else if (token.value === "%empty") {
+          // %empty is a special directive that can appear in rules
+          this.currentTokenIndex++;
+        } else {
+          // Other directives, skip
+          this.currentTokenIndex++;
+        }
+        continue;
+      }
+
       // Symbol reference
       if (token.type === "IDENTIFIER") {
         const nextIndex = this.currentTokenIndex + 1;
@@ -866,6 +893,33 @@ export class LramaParser {
           this.currentTokenIndex < this.tokens.length &&
           this.tokens[this.currentTokenIndex].type === "TYPE_TAG"
         ) {
+          this.currentTokenIndex++;
+        }
+        continue;
+      }
+
+      // Check for %prec directive (or other directives that might appear in rules)
+      if (token.type === "DIRECTIVE") {
+        if (token.value === "%prec") {
+          this.currentTokenIndex++;
+          // The next token is a precedence specifier
+          if (this.currentTokenIndex < this.tokens.length) {
+            const precToken = this.tokens[this.currentTokenIndex];
+            if (
+              precToken.type === "IDENTIFIER" ||
+              precToken.type === "CHARACTER"
+            ) {
+              // Add reference to the precedence token
+              const range = this.createRange(precToken);
+              this.symbolTable.addReference(precToken.value, { range });
+              this.currentTokenIndex++;
+            }
+          }
+        } else if (token.value === "%empty") {
+          // %empty is a special directive that can appear in rules
+          this.currentTokenIndex++;
+        } else {
+          // Other directives, skip
           this.currentTokenIndex++;
         }
         continue;
