@@ -716,6 +716,15 @@ export class LramaParser {
             range: callRange,
             arguments: args,
           });
+
+          // Check for named reference after the parameterized call
+          if (
+            this.currentTokenIndex < this.tokens.length &&
+            this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+            this.tokens[this.currentTokenIndex].value === "["
+          ) {
+            this.skipNamedReference();
+          }
         } else if (currentParameters.has(token.value)) {
           // This is a parameter reference, skip it without adding as undefined
           this.currentTokenIndex++;
@@ -725,13 +734,13 @@ export class LramaParser {
           this.symbolTable.addReference(token.value, { range });
           this.currentTokenIndex++;
 
-          // Check for alias
+          // Check for named reference
           if (
             this.currentTokenIndex < this.tokens.length &&
             this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
             this.tokens[this.currentTokenIndex].value === "["
           ) {
-            this.skipBrackets();
+            this.skipNamedReference();
           }
 
           // Check for suffix operators
@@ -827,12 +836,14 @@ export class LramaParser {
       const nameToken = token;
       let nextIndex = this.currentTokenIndex + 1;
 
-      // Skip alias if present
+      // Skip named reference if present (this is for the rule name)
       if (
         nextIndex < this.tokens.length &&
         this.tokens[nextIndex].type === "SPECIAL" &&
         this.tokens[nextIndex].value === "["
       ) {
+        // Skip the named reference for the rule itself
+        nextIndex++; // Skip '['
         while (
           nextIndex < this.tokens.length &&
           this.tokens[nextIndex].value !== "]"
@@ -935,7 +946,7 @@ export class LramaParser {
           this.tokens[nextIndex].type === "SPECIAL" &&
           this.tokens[nextIndex].value === "("
         ) {
-          // This is a function call like option(X) or mlhs(item)
+          // This is a function call like option(X) or compstmt(stmts)
           const callRange = this.createRange(token);
 
           // Parse the function call and its arguments
@@ -947,19 +958,28 @@ export class LramaParser {
             range: callRange,
             arguments: args,
           });
-        } else {
-          // Regular symbol reference (like mlhs without parentheses)
-          const range = this.createRange(token);
-          this.symbolTable.addReference(token.value, { range });
-          this.currentTokenIndex++;
 
-          // Check for alias
+          // Check for named reference after the parameterized call
           if (
             this.currentTokenIndex < this.tokens.length &&
             this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
             this.tokens[this.currentTokenIndex].value === "["
           ) {
-            this.skipBrackets();
+            this.skipNamedReference();
+          }
+        } else {
+          // Regular symbol reference
+          const range = this.createRange(token);
+          this.symbolTable.addReference(token.value, { range });
+          this.currentTokenIndex++;
+
+          // Check for named reference
+          if (
+            this.currentTokenIndex < this.tokens.length &&
+            this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+            this.tokens[this.currentTokenIndex].value === "["
+          ) {
+            this.skipNamedReference();
           }
 
           // Check for suffix operators
@@ -1091,6 +1111,23 @@ export class LramaParser {
       if (token.type === "SPECIAL" && token.value === "]") {
         break;
       }
+    }
+  }
+
+  private skipNamedReference(): void {
+    // Skip the opening '['
+    this.currentTokenIndex++;
+
+    // Skip everything until we find the closing ']'
+    // Named references contain alias names, not symbol references
+    while (this.currentTokenIndex < this.tokens.length) {
+      const token = this.tokens[this.currentTokenIndex];
+      if (token.type === "SPECIAL" && token.value === "]") {
+        this.currentTokenIndex++;
+        break;
+      }
+      // Don't add identifiers inside [...] as symbol references
+      this.currentTokenIndex++;
     }
   }
 
