@@ -654,10 +654,20 @@ export class LramaParser {
         continue;
       }
 
-      // Action block
+      // Action block (including midrule actions at the beginning of a rule)
       if (token.type === "SPECIAL" && token.value === "{") {
         this.skipCodeBlock();
-        // Check for midrule type tag
+
+        // Check for named reference after action block
+        if (
+          this.currentTokenIndex < this.tokens.length &&
+          this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+          this.tokens[this.currentTokenIndex].value === "["
+        ) {
+          this.skipNamedReference();
+        }
+
+        // Check for midrule type tag after named reference (or directly after action)
         if (
           this.currentTokenIndex < this.tokens.length &&
           this.tokens[this.currentTokenIndex].type === "TYPE_TAG"
@@ -694,7 +704,31 @@ export class LramaParser {
         continue;
       }
 
-      // Symbol reference
+      // Character literal
+      if (token.type === "CHARACTER") {
+        this.currentTokenIndex++;
+
+        // Check for named reference after character literal
+        if (
+          this.currentTokenIndex < this.tokens.length &&
+          this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+          this.tokens[this.currentTokenIndex].value === "["
+        ) {
+          this.skipNamedReference();
+        }
+
+        // Check for suffix operators
+        if (
+          this.currentTokenIndex < this.tokens.length &&
+          this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+          "?*+".includes(this.tokens[this.currentTokenIndex].value)
+        ) {
+          this.currentTokenIndex++;
+        }
+        continue;
+      }
+
+      // Symbol reference (IDENTIFIER)
       if (token.type === "IDENTIFIER") {
         const nextIndex = this.currentTokenIndex + 1;
 
@@ -728,6 +762,15 @@ export class LramaParser {
         } else if (currentParameters.has(token.value)) {
           // This is a parameter reference, skip it without adding as undefined
           this.currentTokenIndex++;
+
+          // Check for named reference after parameter
+          if (
+            this.currentTokenIndex < this.tokens.length &&
+            this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+            this.tokens[this.currentTokenIndex].value === "["
+          ) {
+            this.skipNamedReference();
+          }
         } else {
           // Regular symbol reference
           const range = this.createRange(token);
@@ -751,21 +794,6 @@ export class LramaParser {
           ) {
             this.currentTokenIndex++;
           }
-        }
-        continue;
-      }
-
-      // Character literal
-      if (token.type === "CHARACTER") {
-        this.currentTokenIndex++;
-
-        // Check for suffix operators
-        if (
-          this.currentTokenIndex < this.tokens.length &&
-          this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
-          "?*+".includes(this.tokens[this.currentTokenIndex].value)
-        ) {
-          this.currentTokenIndex++;
         }
         continue;
       }
@@ -1032,14 +1060,31 @@ export class LramaParser {
       const token = this.tokens[this.currentTokenIndex];
       if (token.type === "SPECIAL" && token.value === "{") {
         braceDepth++;
+        this.currentTokenIndex++;
       } else if (token.type === "SPECIAL" && token.value === "}") {
         braceDepth--;
+        this.currentTokenIndex++;
         if (braceDepth === 0) {
-          this.currentTokenIndex++;
+          // After closing brace, check for named reference
+          if (
+            this.currentTokenIndex < this.tokens.length &&
+            this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+            this.tokens[this.currentTokenIndex].value === "["
+          ) {
+            this.skipNamedReference();
+          }
+          // Then check for type tag
+          if (
+            this.currentTokenIndex < this.tokens.length &&
+            this.tokens[this.currentTokenIndex].type === "TYPE_TAG"
+          ) {
+            this.currentTokenIndex++;
+          }
           break;
         }
+      } else {
+        this.currentTokenIndex++;
       }
-      this.currentTokenIndex++;
     }
   }
 
@@ -1116,18 +1161,24 @@ export class LramaParser {
 
   private skipNamedReference(): void {
     // Skip the opening '['
-    this.currentTokenIndex++;
-
-    // Skip everything until we find the closing ']'
-    // Named references contain alias names, not symbol references
-    while (this.currentTokenIndex < this.tokens.length) {
-      const token = this.tokens[this.currentTokenIndex];
-      if (token.type === "SPECIAL" && token.value === "]") {
-        this.currentTokenIndex++;
-        break;
-      }
-      // Don't add identifiers inside [...] as symbol references
+    if (
+      this.currentTokenIndex < this.tokens.length &&
+      this.tokens[this.currentTokenIndex].type === "SPECIAL" &&
+      this.tokens[this.currentTokenIndex].value === "["
+    ) {
       this.currentTokenIndex++;
+
+      // Skip everything until we find the closing ']'
+      // Named references contain alias names, not symbol references
+      while (this.currentTokenIndex < this.tokens.length) {
+        const token = this.tokens[this.currentTokenIndex];
+        if (token.type === "SPECIAL" && token.value === "]") {
+          this.currentTokenIndex++;
+          break;
+        }
+        // Don't add identifiers inside [...] as symbol references
+        this.currentTokenIndex++;
+      }
     }
   }
 
