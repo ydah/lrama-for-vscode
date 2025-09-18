@@ -1,9 +1,6 @@
 # Lrama for Visual Studio Code
 
 This extension provides comprehensive support for the [Lrama](https://github.com/ruby/lrama) parser generator in Visual Studio Code.
-
-![image](https://github.com/user-attachments/assets/751101ab-654a-44e6-ab82-79e1bd94c6e1)
-
 It offers syntax highlighting, convenient snippets, and advanced IntelliSense features powered by the Language Server Protocol (LSP) to enhance your Lrama development workflow.
 
 ## Features
