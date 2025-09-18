@@ -24,6 +24,10 @@ A dedicated language server analyzes your code to provide intelligent features.
 - Find All References
   - Find all references to a symbol. Use the shortcut `Ctrl/Cmd` and clicking it.
   - Also accessible with the `Shift+F12` key.
+- Hover
+  - View detailed information about symbols by hovering over them with your mouse.
+- Auto Completion
+  - Get context-aware suggestions as you type, including rule names, token names, and directives.
 - Document Symbols (Outline)
   - Get a complete outline of your grammar file in the Explorer, showing all rule definitions for quick navigation.
 - Diagnostics
