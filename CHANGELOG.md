@@ -6,6 +6,13 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [v1.0.0] - 2025-09-19
+
+### Added
+
+- Added support auto completion feature
+- Added support hover feature
+
 ## [v0.1.2] - 2025-09-18
 
 ### Changed
