@@ -16,9 +16,6 @@
     "Programming Languages",
     "Snippets"
   ],
-  "activationEvents": [
-    "onLanguage:lrama"
-  ],
   "main": "./client/out/extension.js",
   "contributes": {
     "languages": [
