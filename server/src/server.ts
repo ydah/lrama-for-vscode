@@ -14,11 +14,14 @@ import {
   DocumentSymbol,
   SymbolKind,
   DocumentSymbolParams,
+  CompletionParams,
+  CompletionItem,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { LramaParser } from "./parser";
 import { SymbolTable, Symbol, SymbolType } from "./symbolTable";
+import { CompletionProvider } from "./completion";
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -48,6 +51,10 @@ connection.onInitialize((params: InitializeParams) => {
       definitionProvider: true,
       referencesProvider: true,
       documentSymbolProvider: true,
+      completionProvider: {
+        resolveProvider: false,
+        triggerCharacters: ["%", "(", "[", "<"],
+      },
     },
   };
 
@@ -195,6 +202,24 @@ connection.onDocumentSymbol(
     return symbolTable.getDocumentSymbols();
   }
 );
+
+// Completion
+connection.onCompletion((params: CompletionParams): CompletionItem[] => {
+  const uri = params.textDocument.uri;
+  const symbolTable = symbolTables.get(uri);
+
+  if (!symbolTable) {
+    return [];
+  }
+
+  const document = documents.get(uri);
+  if (!document) {
+    return [];
+  }
+
+  const completionProvider = new CompletionProvider(symbolTable);
+  return completionProvider.getCompletions(document, params.position);
+});
 
 // Make the text document manager listen on the connection
 documents.listen(connection);
