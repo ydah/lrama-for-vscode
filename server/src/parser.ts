@@ -238,6 +238,8 @@ export class LramaParser {
 
   private parseGrammar(): void {
     let section: "declarations" | "rules" | "epilogue" = "declarations";
+    let startSymbol: string | undefined = undefined;
+    let firstNormalRule: string | undefined = undefined;
 
     while (this.currentTokenIndex < this.tokens.length) {
       const token = this.tokens[this.currentTokenIndex];
@@ -254,9 +256,50 @@ export class LramaParser {
 
       switch (section) {
         case "declarations":
+          // Check if this is a %start declaration
+          if (token.type === "DIRECTIVE" && token.value === "%start") {
+            const nextIdx = this.currentTokenIndex + 1;
+            if (
+              nextIdx < this.tokens.length &&
+              this.tokens[nextIdx].type === "IDENTIFIER"
+            ) {
+              startSymbol = this.tokens[nextIdx].value;
+            }
+          }
           this.parseDeclaration();
           break;
         case "rules":
+          // Track the first normal rule (not %rule and not inline)
+          if (!firstNormalRule && token.type === "IDENTIFIER") {
+            // Check if this is a regular rule definition
+            let nextIndex = this.currentTokenIndex + 1;
+
+            // Skip alias if present
+            if (
+              nextIndex < this.tokens.length &&
+              this.tokens[nextIndex].type === "SPECIAL" &&
+              this.tokens[nextIndex].value === "["
+            ) {
+              while (
+                nextIndex < this.tokens.length &&
+                this.tokens[nextIndex].value !== "]"
+              ) {
+                nextIndex++;
+              }
+              if (nextIndex < this.tokens.length) {
+                nextIndex++; // Skip ']'
+              }
+            }
+
+            // Check for colon (regular rule definition)
+            if (
+              nextIndex < this.tokens.length &&
+              this.tokens[nextIndex].type === "SPECIAL" &&
+              this.tokens[nextIndex].value === ":"
+            ) {
+              firstNormalRule = token.value;
+            }
+          }
           this.parseRule();
           break;
         case "epilogue":
@@ -265,6 +308,9 @@ export class LramaParser {
           break;
       }
     }
+
+    // Store the start symbol or first rule for validation
+    this.symbolTable.setStartSymbol(startSymbol || firstNormalRule);
   }
 
   private parseDeclaration(): void {
@@ -1263,13 +1309,14 @@ export class LramaParser {
         }
       }
 
-      // Check for unused symbols (but not for character literal tokens)
+      // Check for unused symbols (but not for character literal tokens or start symbol)
       if (
         symbol.definition &&
         symbol.references.length === 0 &&
         symbol.parameterizedCalls?.length === 0 &&
         symbol.type === SymbolType.Rule &&
-        !this.isCharacterLiteral(symbol.name)
+        !this.isCharacterLiteral(symbol.name) &&
+        symbol.name !== this.symbolTable.getStartSymbol()
       ) {
         this.addDiagnostic(
           symbol.definition.nameRange,

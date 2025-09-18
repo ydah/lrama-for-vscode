@@ -44,6 +44,15 @@ export interface Symbol {
 export class SymbolTable {
   private symbols: Map<string, Symbol> = new Map();
   private parameterizedRules: Map<string, Symbol> = new Map(); // Separate storage for parameterized rules
+  private startSymbol: string | undefined = undefined; // Start symbol name
+
+  public setStartSymbol(name: string | undefined): void {
+    this.startSymbol = name;
+  }
+
+  public getStartSymbol(): string | undefined {
+    return this.startSymbol;
+  }
 
   public addSymbol(
     name: string,
@@ -108,6 +117,28 @@ export class SymbolTable {
       const newSymbol: Symbol = {
         name,
         type: SymbolType.Nonterminal,
+        references: [reference],
+        parameterizedCalls: [],
+      };
+      this.symbols.set(name, newSymbol);
+    }
+  }
+
+  public addPrecedenceReference(
+    name: string,
+    reference: SymbolReference
+  ): void {
+    // Precedence references should link to tokens defined with %left, %right, %nonassoc
+    // Check if the symbol exists (it should have been defined as a token)
+    const symbol = this.symbols.get(name);
+    if (symbol && symbol.type === SymbolType.Token) {
+      // Add as a regular reference to the token
+      symbol.references.push(reference);
+    } else {
+      // Create as a token reference (precedence tokens are implicitly tokens)
+      const newSymbol: Symbol = {
+        name,
+        type: SymbolType.Token,
         references: [reference],
         parameterizedCalls: [],
       };
