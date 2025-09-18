@@ -16,12 +16,15 @@ import {
   DocumentSymbolParams,
   CompletionParams,
   CompletionItem,
+  HoverParams,
+  Hover,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { LramaParser } from "./parser";
 import { SymbolTable, Symbol, SymbolType } from "./symbolTable";
 import { CompletionProvider } from "./completion";
+import { HoverProvider } from "./hover";
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -55,6 +58,7 @@ connection.onInitialize((params: InitializeParams) => {
         resolveProvider: false,
         triggerCharacters: ["%", "(", "[", "<"],
       },
+      hoverProvider: true,
     },
   };
 
@@ -202,6 +206,24 @@ connection.onDocumentSymbol(
     return symbolTable.getDocumentSymbols();
   }
 );
+
+// Hover
+connection.onHover((params: HoverParams): Hover | null => {
+  const uri = params.textDocument.uri;
+  const symbolTable = symbolTables.get(uri);
+
+  if (!symbolTable) {
+    return null;
+  }
+
+  const document = documents.get(uri);
+  if (!document) {
+    return null;
+  }
+
+  const hoverProvider = new HoverProvider(symbolTable);
+  return hoverProvider.getHover(document, params.position);
+});
 
 // Completion
 connection.onCompletion((params: CompletionParams): CompletionItem[] => {
