@@ -2,7 +2,7 @@
   "name": "lrama",
   "displayName": "Lrama",
   "description": "Lrama syntax highlighting, snippets, and language server.",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "publisher": "ydah",
   "repository": {
     "type": "git",
