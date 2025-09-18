@@ -1242,6 +1242,11 @@ export class LramaParser {
           continue;
         }
 
+        // Skip warning for reserved tokens (error, YYEOF, etc.)
+        if (this.isReservedToken(symbol.name)) {
+          continue;
+        }
+
         // Only warn for non-terminal symbols (not tokens or built-in functions)
         if (
           !this.isBuiltinFunction(symbol.name) &&
@@ -1306,6 +1311,12 @@ export class LramaParser {
       baseName.startsWith("k") ||
       baseName.startsWith("TOKEN")
     );
+  }
+
+  private isReservedToken(name: string): boolean {
+    // Reserved tokens in Yacc/Bison
+    const reserved = ["error", "YYEOF", "YYUNDEF", "YYerror"];
+    return reserved.includes(name);
   }
 
   private isCommonParameter(name: string): boolean {
