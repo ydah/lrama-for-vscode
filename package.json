@@ -14,8 +14,7 @@
   },
   "categories": [
     "Programming Languages",
-    "Snippets",
-    "Language Protocol Server"
+    "Snippets"
   ],
   "main": "./client/out/extension.js",
   "contributes": {
