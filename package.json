@@ -68,10 +68,10 @@
     }
   },
   "scripts": {
-      "vscode:prepublish": "node ./esbuild.js",
-      "compile": "node ./esbuild.js",
-      "watch": "node ./esbuild.js --watch",
-      "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+    "vscode:prepublish": "node ./esbuild.js",
+    "compile": "node ./esbuild.js",
+    "watch": "node ./esbuild.js --watch",
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
